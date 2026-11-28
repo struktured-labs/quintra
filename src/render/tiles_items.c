@@ -126,7 +126,8 @@ void tiles_load_hud_b_icon(u8 item_id) BANKED {
     // icons). Do not use SPR_WAYGEAR_HOOK - SPR_ITEM_IRON_HEART: VRAM
     // tile numbers jump from the pickup block to 204.
     u8 hook = (u8)(26 + (SPR_WAYGEAR_HOOK - SPR_WAYGEAR_GLOVE));
-    VBK_REG = 0;
+    // Bank 1: see HUD_B_LETTER. Bank 0 stays the OBJ atlas's alone.
+    VBK_REG = 1;
     set_bkg_data(HUD_B_LETTER, 1, letter_b);
     if (item_id == ITEM_ID_BOOMERANG) src = sprite_boomerang;
     else if (item_id == ITEM_ID_HOOKSHOT) src = sprite_item_icons[hook];
@@ -138,4 +139,5 @@ void tiles_load_hud_b_icon(u8 item_id) BANKED {
     else if (item_id == 13) src = sprite_item_icons[SPR_ITEM_MANA_GEM - SPR_ITEM_IRON_HEART];
     else if (item_id == 14) src = sprite_item_icons[SPR_ITEM_THORN - SPR_ITEM_IRON_HEART];
     if (src) set_bkg_data(HUD_B_ICON, 1, src);
+    VBK_REG = 0;
 }

@@ -25,10 +25,15 @@
 // Merchant proximity offer icons. These live only on the WINDOW HUD, so the
 // dungeon tilemap never interprets them as terrain.
 #define HUD_AEGIS_PIPS  124 // window-only 1/2/3 charge pips; rewritten on change
-// Equipped-B HUD box. High slots stay free of room tiles; pack frames
-// start at 0xF6 and waygear at 0xF2, so these only live while the window is shown.
-#define HUD_B_LETTER    0xF0
-#define HUD_B_ICON      0xF1
+// Equipped-B HUD box. These two tiles live in VRAM bank 1, so the window
+// cells that show them carry HUD_B_ATTR. Bank 0 has no free pair: BG tiles
+// 128..255 are the same VRAM as OBJ tiles 128..255, and the old 0xF0/0xF1
+// slots were Vespine's powered-up stride strip (OBJ 240/241), so every HUD
+// redraw drew a gold "B" on her legs (#253). Bank 1 BG tiles below 128 are
+// used up to 98 (Riftwild art, Hexa, Sun Lattice, Leybeam, Cinder fire).
+#define HUD_B_LETTER    126
+#define HUD_B_ICON      127
+#define HUD_B_ATTR      0x0F // HUD palette 7 | VRAM bank 1
 #define HUD_OFFER_HEAL   40
 #define HUD_OFFER_RELIC  41
 #define HUD_OFFER_VITAL  42

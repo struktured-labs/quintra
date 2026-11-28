@@ -281,6 +281,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_boss_drop_persist.py
 	uv run --quiet --with pyboy python scripts/test_convergence_boss_cap.py
 	uv run --quiet --with pyboy python scripts/test_convergence_transform.py
+	$(PYBOY_RUN) scripts/test_ascended_walk_tiles.py
 	uv run --quiet --with pyboy python scripts/test_enemy_identity.py
 	$(PYBOY_RUN) scripts/test_medium_cinder.py
 	$(PYBOY_RUN) scripts/test_reinforcement_caller.py

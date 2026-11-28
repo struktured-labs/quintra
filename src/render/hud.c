@@ -216,6 +216,7 @@ void hud_redraw_depth(void) BANKED {
     // Notices cover the box and this redraw restores it when they expire.
     // Room depth remains on the Pack.
     u8 row[2];
+    u8 box_attr = 7;
     if (hud_notice_ticks) return;
     if (player.curse_flags & CURSE_HUNGER) {
         u8 d = player.curse_rooms;
@@ -226,12 +227,13 @@ void hud_redraw_depth(void) BANKED {
         tiles_load_hud_b_icon(player.active_item);
         row[0] = HUD_B_LETTER;
         row[1] = HUD_B_ICON;
+        box_attr = HUD_B_ATTR;   // the B box tiles live in VRAM bank 1
     }
     // Notices can paint cols 10-15 on a temporary palette. Restore pal 7
     // here; hud_set_lane_palette only covers the 12-15 lane.
     {
         u8 attr[2];
-        attr[0] = attr[1] = 7;
+        attr[0] = attr[1] = box_attr;
         VBK_REG = 1;
         set_win_tiles(10, 0, 2, 1, attr);
         VBK_REG = 0;
