@@ -66,6 +66,8 @@ enum {
     NW_AEGIS, NW_BLOCK3, NW_LIMIT, NW_FREEMP, NW_MEND, NW_REGEN, NW_ENDED,
     NW_FORM, NW_COPIES, NW_HALO, NW_RING8, NW_REACH, NW_AREA4,
     NW_ASST, NW_BLOOM, NW_WINGS, NW_MATES,
+    // Will cap raised by a Waygear tool (#208). Appended: ids above are stable.
+    NW_WILLUP,
     NW_COUNT
 };
 // Pickup notice kinds (below the 0x80 status flag, above the stat ids).

@@ -197,6 +197,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_corvin_max_will_pickup.py
 	$(PYBOY_RUN) scripts/test_serpent_tail_shield.py
 	$(PYBOY_RUN) scripts/test_will_sfx.py
+	$(PYBOY_RUN) scripts/test_will_cap_notice.py
 	$(PYBOY_RUN) scripts/test_will_b_weapons.py
 	$(PYBOY_RUN) scripts/test_enemy_patterns.py
 	$(PYBOY_RUN) scripts/test_magic.py
