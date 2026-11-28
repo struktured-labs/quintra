@@ -40,6 +40,8 @@ static const u16 rune_pal_high[4] = {
 
 static u8 rune_flash_index = 0xFF;
 static u8 rune_flash_frames;
+// Set while the crystal and door slots hold the packed note colours.
+static u8 note_palettes_live;
 
 static void set_tile_live(u8 x, u8 y, u8 tile, u8 attr) {
     room_tilemap[y][x] = tile;
@@ -91,8 +93,12 @@ static u16 brighten_colour(u16 c) {
 void puzzle_apply_note_palettes(u8 dim) BANKED {
     u16 low[4], high[4];
     u8 i;
-    if (!PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) || !room_rune_count)
+    if (!PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) || !room_rune_count) {
+        // The caller has just reloaded the stage palettes over the slots.
+        note_palettes_live = 0;
         return;
+    }
+    note_palettes_live = 1;
     for (i = 0; i < 4; ++i) {
         low[i] = rune_pal_low[i];
         high[i] = rune_pal_high[i];
@@ -115,6 +121,19 @@ void puzzle_load_note_palettes(void) BANKED {
         return;
     tiles_load_note_plates();
     puzzle_apply_note_palettes(0);
+}
+
+// Door transitions. A slide shows the old and the new room at once, and
+// both draw crystals, doors and pots from the two slots the plates borrow.
+// Upload this room's plate art, but leave the colours to the caller: it
+// returns the slots to the stage for the slide when this returns 1, and
+// room_load_environment_palettes() lights the plates on arrival (#252).
+u8 puzzle_note_slide_handoff(void) BANKED {
+    u8 live = note_palettes_live;
+    note_palettes_live = 0;
+    if (PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) && room_rune_count)
+        tiles_load_note_plates();
+    return live;
 }
 
 static void rune_paint_plate(u8 plate) {
