@@ -168,17 +168,25 @@ void hud_redraw_hp(void) BANKED {
         write_heart_phase(0);
     }
 
+    // An odd maximum (Vespine starts on 13 half-hearts) ends in a half
+    // container. At full health that last heart is drawn whole, so the HUD
+    // shows a missing heart exactly when a heart pickup would heal (#255).
+    if (hearts_filled >= hearts_total)
+        hearts_filled = (u8)(hearts_total + 1);
     for (i = 0; i < HUD_MAX_HEARTS; ++i) {
-        u8 cap_full  = (u8)(2 + (i * 2));    // half-hearts up to and including full
-        u8 cap_half  = (u8)(1 + (i * 2));
-        if ((u8)((i * 2)) >= hearts_total) {
+        // Half-hearts below this slot. Compare against this one value:
+        // SDCC 4.5.1 folded the old separate "1 + i * 2" half threshold
+        // into "(2 + i * 2) + 1", so a half heart never drew and every odd
+        // HP showed one half-heart less than the hero really had.
+        u8 below = (u8)(i << 1);
+        if (below >= hearts_total) {
             row[i] = HUD_BLANK;             // no heart slot for this class
-        } else if (hearts_filled >= cap_full) {
-            row[i] = HUD_HEART_FULL;
-        } else if (hearts_filled >= cap_half) {
+        } else if (hearts_filled <= below) {
+            row[i] = HUD_HEART_EMPTY;
+        } else if ((u8)(hearts_filled - below) == 1) {
             row[i] = HUD_HEART_HALF;
         } else {
-            row[i] = HUD_HEART_EMPTY;
+            row[i] = HUD_HEART_FULL;
         }
     }
     VBK_REG = 0;
