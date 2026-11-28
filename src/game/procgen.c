@@ -1360,12 +1360,10 @@ void procgen_generate_room_body(void) BANKED {
                 // to buy the run-long sustain build the roguelike promises.
                 // Unlike a random relic roll, the player can plan around
                 // its fifth-kill half-heart rhythm before the next region.
-                // The shelf row sits above the east door's rows (y 60..76)
-                // so the way in from the square is open floor (#281).
                 if (!(run_state.shop_civic & 4))
-                    spawn_shop_ware(88, 40, WARE_VAMP, 35);
+                    spawn_shop_ware(88, 64, WARE_VAMP, 35);
                 if (!(run_state.shop_civic & 8))
-                    spawn_shop_ware(120, 40, WARE_RUNE, 30);
+                    spawn_shop_ware(120, 64, WARE_RUNE, 30);
                 // The apothecary also keeps a restocked Antidote shelf
                 // (no purchase bit; buying more is always allowed).
                 spawn_shop_ware(ANTIDOTE_TOWN_X, ANTIDOTE_TOWN_Y,

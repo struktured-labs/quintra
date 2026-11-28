@@ -5,10 +5,15 @@ Walking from the village square into the forge quarter used to land the
 hero on the Antidote shelf: it stood at the east door, on the tiles the
 hero arrives on, so every visit began by touching a ware.
 
-For every door-to-door walk between the three village screens, the hero's
-arrival spot and the lane leading inward from it must be free of shop
-wares and their price tags. The lane is the hero's own body rows, a tile
-of margin above and below, and two tiles of open floor beyond the body.
+For every door-to-door walk between the three village screens, the hero
+must arrive clear of every shop ware: nothing buyable within a tile of the
+hero's body on any side, so the first step in any direction is free. Price
+tags are checked too; they float a tile and a half above their ware.
+
+The quarter's Vampiric and Rune shelves stay on the door rows on purpose.
+They are the apothecary's counter: the hero talks to the keeper across
+them (test_merchant_counter.py). The Rune shelf is a tile clear of the
+arriving hero and the column at the door is open floor north and south.
 """
 from pathlib import Path
 
@@ -22,8 +27,7 @@ ENT_PICKUP, PICKUP_SHOP, PICKUP_SHOP_TAG = 3, 4, 13
 ARRIVAL, MARKET, QUARTER = 0, 1, 2
 NAMES = {ARRIVAL: "square", MARKET: "market", QUARTER: "forge quarter"}
 EAST, WEST = 1, 3
-LANE_DEPTH = 16          # two tiles of open floor inward of the hero's body
-LANE_MARGIN = 8          # one tile above and below the hero's body
+MARGIN = 8               # one clear tile around the arriving hero
 # (leave from, walk direction, arrive in)
 WALKS = ((ARRIVAL, WEST, QUARTER), (QUARTER, EAST, ARRIVAL),
          (ARRIVAL, EAST, MARKET), (MARKET, WEST, ARRIVAL))
@@ -43,12 +47,9 @@ def wares(pb):
     return out
 
 
-def lane(hx, hy, direction):
-    """Rectangle (x0, y0, x1, y1): the arrival body plus the way inward."""
-    y0, y1 = hy - LANE_MARGIN, hy + 16 + LANE_MARGIN
-    if direction == WEST:            # arrived at the east door, heading west
-        return hx - LANE_DEPTH, y0, hx + 16, y1
-    return hx, y0, hx + 16 + LANE_DEPTH, y1
+def lane(hx, hy):
+    """Rectangle (x0, y0, x1, y1): the arrival body plus a tile all round."""
+    return hx - MARGIN, hy - MARGIN, hx + 16 + MARGIN, hy + 16 + MARGIN
 
 
 def main():
@@ -62,7 +63,7 @@ def main():
             f"expected to start in the {NAMES[source]}")
         tms.walk_town(pb, direction, target)
         hx, hy = u16(pb, PL + 9), u16(pb, PL + 11)
-        x0, y0, x1, y1 = lane(hx, hy, direction)
+        x0, y0, x1, y1 = lane(hx, hy)
         stock = wares(pb)
         assert any(kind == PICKUP_SHOP for _x, _y, kind in stock) or \
             target == ARRIVAL, f"{NAMES[target]} has no wares at all"
@@ -70,11 +71,11 @@ def main():
                    if x < x1 and x + 8 > x0 and y < y1 and y + 8 > y0]
         assert not blocked, (
             f"entering the {NAMES[target]} from the {NAMES[source]}: hero "
-            f"arrives at {(hx, hy)} and the lane {(x0, y0, x1, y1)} holds "
+            f"arrives at {(hx, hy)} and the box {(x0, y0, x1, y1)} holds "
             f"ware(s)/tag(s) at {blocked}")
         checked.append(f"{NAMES[source]} -> {NAMES[target]}")
     env.pb.stop(save=False)
-    print(f"[town-entry-lanes] PASS no ware or price tag in the arrival lane "
+    print(f"[town-entry-lanes] PASS no ware or price tag within a tile of the hero "
           f"for {len(checked)} village door walks: {', '.join(checked)}")
 
 
