@@ -346,16 +346,8 @@ static void draw_dungeon_grid(void) {
             }
         }
     }
-    // After the tutorial dungeon, local rooms 2 and 8 own a reversible rift
-    // well. Explicit stage starts make those the same Compass cells in every
-    // dungeon. Reveal one violet end-cap when its room is known;
-    // once both are seen, the completed diagonal makes the nonlinear shortcut
-    // explicit without pretending it is a cardinal hallway.
-    if (run_state.bosses_beaten > 0) {
-        if (run_state_dungeon_cell_seen(2)
-            || run_state_dungeon_cell_seen(8))
-            map_put(9, 4, BGT_MAP_RIFT);
-    }
+    // The rift-well link between local rooms 2 and 8 (map_marks.c).
+    if (run_state.bosses_beaten > 0 && size > 8) map_draw_rift_link(here);
     map_draw_dungeon_legend();
     // "LAW" in the colour of the active state: corridors of the same colour
     // are open now, the others wait for an altar.

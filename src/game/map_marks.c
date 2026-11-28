@@ -39,6 +39,30 @@ static void put_shop_key(u8 x, u8 y) {
     put((u8)(x + 4), y, BGT_MAP_LABEL_P);
 }
 
+// After the tutorial dungeon, local rooms 2 and 8 own a reversible rift
+// well. Explicit stage starts make those the same Compass cells in every
+// dungeon: nodes at (7,2) and (10,5). Each known end wears a violet diamond
+// in the corner of its own node that faces the other end. Once both are
+// known, a third diamond in the gap between them completes a diagonal that
+// touches both rooms. A lone diamond floating in that gap read as an
+// unexplained marker between rooms (#265), so it now needs both ends, and
+// the legend names it beside SHOP.
+void map_draw_rift_link(u8 here) BANKED {
+    u8 a = run_state_dungeon_cell_seen(2);
+    u8 b = run_state_dungeon_cell_seen(8);
+    // The hero's own node keeps its full YOU mark, and the key appears
+    // only with a diamond to explain.
+    if (!((a && here != 2) || (b && here != 8))) return;
+    if (a && here != 2) put(8, 3, BGT_MAP_RIFT);
+    if (b && here != 8) put(10, 5, BGT_MAP_RIFT);
+    if (a && b) put(9, 4, BGT_MAP_RIFT);
+    put(6, 16, BGT_MAP_RIFT);
+    put(7, 16, BGT_MAP_LABEL_R);
+    put(8, 16, BGT_MAP_LABEL_I);
+    put(9, 16, BGT_MAP_LABEL_F);
+    put(10, 16, BGT_MAP_LABEL_T);
+}
+
 void map_load_shop_palette(void) BANKED {
     palette_bg_load(BGPAL_SHOP, map_pal_shop);
 }

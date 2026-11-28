@@ -214,6 +214,7 @@ verify: all check-balance-bot
 	uv run --quiet --with pyboy python scripts/test_performance.py
 	uv run --quiet --with pyboy python scripts/test_run_clock.py
 	uv run --quiet --with pyboy python scripts/test_compass_map.py
+	$(PYBOY_RUN) scripts/test_compass_rift_link.py
 	uv run --quiet --with pyboy python scripts/test_merchant_map.py
 	$(PYBOY_RUN) scripts/test_quest_guidance.py
 	uv run --quiet --with "$(PYBOY_SPEC)" --with pillow python scripts/test_riftwild_mission.py

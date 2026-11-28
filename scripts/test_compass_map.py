@@ -337,9 +337,23 @@ def main() -> None:
         "completed Rift Sigil remained marked as an active GOAL"
 
     # Later dungeons own a reversible nonlinear link between local rooms 2
-    # and 8. Seeing the first endpoint reveals only its violet end-cap; after
-    # both rooms are known, a diagonal chain describes the real teleport edge
-    # without mislabeling it as a cardinal corridor.
+    # and 8. Each known end wears a violet diamond in the corner of its own
+    # node that faces the other end; the gap between the rooms stays empty
+    # until both are known, when a third diamond completes the diagonal
+    # (#265: a lone diamond in the gap read as an unexplained marker). The
+    # legend names it RIFT whenever a diamond is shown.
+    RIFT_KEY = [BGT_MAP_RIFT, BGT_MAP_LABEL_R, BGT_MAP_LABEL_I,
+                BGT_MAP_LABEL_F, BGT_MAP_LABEL_T]
+
+    def rift_marks():
+        return {name: map_tile(pb, x, y) == BGT_MAP_RIFT for name, (x, y)
+                in (("room2", (8, 3)), ("gap", (9, 4)), ("room8", (10, 5)))}
+
+    def rift_key():
+        return [map_tile(pb, 6 + i, 16) for i in range(5)]
+
+    # Standing in room 2 with room 8 unknown: the hero's node keeps its
+    # full YOU mark and nothing floats in the gap.
     close_compass(pb, screen, player)
     pb.memory[rs + 11] = 1
     pb.memory[rs + 37] = 0
@@ -347,25 +361,44 @@ def main() -> None:
     pb.memory[rs + 20] = 0x07    # cells 0, 1, and 2 seen
     pb.memory[rs + 29] = 0
     open_compass(pb, screen)
-    assert map_tile(pb, 9, 4) == BGT_MAP_RIFT, \
-        (f"Compass did not reveal the discovered rift endpoint: "
-         f"tile={map_tile(pb, 9, 4)} screen={pb.memory[screen]} "
-         f"room={pb.memory[rs + 1]} bosses={pb.memory[rs + 11]} "
-         f"world={pb.memory[rs + 17]} seen={pb.memory[rs + 20]:02x}")
+    assert rift_marks() == {"room2": False, "gap": False, "room8": False}, \
+        f"lone rift endpoint drew a marker off its room: {rift_marks()}"
+    assert node_tile(pb, 2) == BGT_MAP_BIG_HERE
+    assert rift_key() != RIFT_KEY, "RIFT key shown with no diamond to explain"
 
+    # One room away, still only one end known: the diamond sits on room 2.
     close_compass(pb, screen, player)
-    pb.memory[rs + 1] = STAGE_START[1] + 8
-    pb.memory[rs + 20] = 0x07    # cells 0, 1, and 2 seen
+    pb.memory[rs + 1] = STAGE_START[1] + 1
+    open_compass(pb, screen)
+    assert rift_marks() == {"room2": True, "gap": False, "room8": False}, (
+        f"a single known rift end must mark its own room, not the gap: "
+        f"{rift_marks()} room={pb.memory[rs + 1]} "
+        f"bosses={pb.memory[rs + 11]} seen={pb.memory[rs + 20]:02x}")
+    assert rift_key() == RIFT_KEY, f"dungeon legend lacks RIFT: {rift_key()}"
+    pb.screen.image.save(ROOT / "tmp" / "compass-rift-one-end.png")
+
+    # Both ends known, hero elsewhere: a three-diamond diagonal joins them.
+    close_compass(pb, screen, player)
     pb.memory[rs + 29] = 0x01    # cell 8 seen
     open_compass(pb, screen)
-    assert map_tile(pb, 9, 4) == BGT_MAP_RIFT, \
-        "Compass did not preserve the discovered rift shortcut"
+    assert rift_marks() == {"room2": True, "gap": True, "room8": True}, \
+        f"Compass did not join the discovered rift shortcut: {rift_marks()}"
+    assert rift_key() == RIFT_KEY
     # The diamond is intentionally hollow at its exact centre; sample one of
     # its authored lit pixels rather than mistaking that hole for palette loss.
-    rift_rgb = pb.screen.image.getpixel((9 * 8 + 2, 4 * 8 + 3))[:3]
-    assert rift_rgb == sigil_rgb, (
-        f"rift edge lost its violet semantic color: {rift_rgb} != {sigil_rgb}")
+    for x, y in ((8, 3), (9, 4), (10, 5), (6, 16)):
+        rift_rgb = pb.screen.image.getpixel((x * 8 + 2, y * 8 + 3))[:3]
+        assert rift_rgb == sigil_rgb, (
+            f"rift mark at {(x, y)} lost its violet semantic color: "
+            f"{rift_rgb} != {sigil_rgb}")
     pb.screen.image.save(ROOT / "tmp" / "compass-rift-link.png")
+
+    # Standing on the far end: its node is YOU, the rest of the link stays.
+    close_compass(pb, screen, player)
+    pb.memory[rs + 1] = STAGE_START[1] + 8
+    open_compass(pb, screen)
+    assert rift_marks() == {"room2": True, "gap": True, "room8": False}, \
+        f"Compass did not preserve the discovered rift shortcut: {rift_marks()}"
 
     # Back-half fixtures are revealed one at a time instead of allowing the
     # player to cut diagonally from the first Warden to the sanctuary.
