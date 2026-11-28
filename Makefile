@@ -339,6 +339,7 @@ verify: all check-balance-bot
 	$(PYBOY_RUN) scripts/test_powerup_phase2.py
 	$(PYBOY_RUN) scripts/test_powerup_roulette.py
 	$(PYBOY_RUN) scripts/test_powerup_shrine.py
+	$(PYBOY_RUN) scripts/test_no_roulette_in_merchant_rooms.py
 	$(PYBOY_RUN) scripts/test_confusion.py
 	bash scripts/test_miniboss_escorts.sh $(BINDIR)/$(PROJECT).gbc
 	uv run --quiet --with pyboy python scripts/test_miniboss_spawn_reach.py
