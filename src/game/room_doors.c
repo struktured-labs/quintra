@@ -6,6 +6,7 @@
 #include "game/dungeon_director.h"
 #include "game/law_lock.h"
 #include "game/procgen.h"
+#include "game/puzzle.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "render/tiles.h"
@@ -83,8 +84,12 @@ void room_unseal_doors(void) BANKED {
                 continue;
             if (cleared_boss && dir == DIR_E
                 && room_world_width > ROOM_VIEW_W_PX) continue;
-            attr = (dir == room_objective_dir)
-                ? BGPAL_CRYSTAL : BGPAL_DOOR;
+            // Note rooms lend the crystal and door slots to the plates,
+            // so their doors stay on the amber slot, as every redraw
+            // paints them (puzzle_rune_attr). Otherwise the opened
+            // objective door picked up the plates' blue (#252).
+            attr = PUZZLE_KIND_HAS_NOTES(room_puzzle_kind) ? BGPAL_CRACK
+                : (dir == room_objective_dir) ? BGPAL_CRYSTAL : BGPAL_DOOR;
             for (half = 0; half < 2; ++half) {
                 u8 x = unseal_x(dir, half,
                     cleared_boss ? (ROOM_W - 1) : east);

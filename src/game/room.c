@@ -2490,7 +2490,16 @@ screen_id_t room_tick(u8 keys, u8 pressed) {
                 // seam stream or blanked rebuild paints them. Door entries
                 // used to skip this, leaving the plates on stale Compass art
                 // (or blank VRAM) until a pack resume reloaded them.
-                puzzle_load_note_palettes();
+                // The plates borrow the crystal and door palette slots,
+                // and a slide shows both rooms at once. Give the slots
+                // back to the stage for the slide so neither room's
+                // crystals, doors or pots flash in note colours (#252);
+                // room_load_environment_palettes() below lights the plates.
+                if (puzzle_note_slide_handoff() && !room_is_outdoor()
+                    && room_stage() == stage_seen) {
+                    palette_bg_load(BGPAL_CRYSTAL, stage_pal[stage_seen][2]);
+                    palette_bg_load(BGPAL_DOOR, stage_pal[stage_seen][3]);
+                }
                 if (room_encounter_kind == ENCOUNTER_HUNT)
                     play_boss_music();
                 // A wide-to-wide edge is a continuous district seam. Rotate

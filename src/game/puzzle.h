@@ -97,6 +97,9 @@ extern u8 room_row_progress;
 extern u8 room_echo_mode;
 
 void puzzle_load_note_palettes(void) BANKED;
+// Door path: upload plate art only; 1 when the caller must hand the
+// borrowed crystal/door palette slots back to the stage before a slide.
+u8 puzzle_note_slide_handoff(void) BANKED;
 void puzzle_apply_note_palettes(u8 dim) BANKED;
 void tiles_load_note_plates(void) BANKED;
 void rune_cancel_flash(void) BANKED;
