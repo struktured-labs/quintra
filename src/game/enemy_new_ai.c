@@ -10,6 +10,8 @@
 #include "game/entity.h"
 #include "game/player.h"
 #include "game/projectile.h"
+#include "game/puzzle.h"
+#include "game/dungeon_director.h"
 #include "game/room.h"
 #include "game/run_state.h"
 #include "game/status.h"
@@ -1015,15 +1017,63 @@ static u8 basilisk_tier(void) {
 /* One basilisk per room (they share one beam and one art slot). The keeper
    gets the blank core tile, the full 15x15 coil hitbox, and a nudge until
    its 32x32 body sits on open floor. */
+/* A Sun Lattice (light puzzle) room: this dungeon's Trial or Waystone cell
+   when that slot rolled the lattice. room_puzzle_kind is not set yet at
+   spawn time, so ask the same seed-first source puzzle.c uses. */
+static u8 sun_lattice_room(void) {
+    u8 local;
+    if (run_state.world_mode) return 0;
+    local = run_state_dungeon_local();
+    if (local == run_state.mission_waystone_cell)
+        return puzzle_slot_kind(1) == PUZZLE_SUN_LATTICE;
+    if (local == run_state.mission_trial_cell)
+        return puzzle_slot_kind(0) == PUZZLE_SUN_LATTICE;
+    return 0;
+}
+
+/* The lattice's light beam and a basilisk's floor beam are the same crystal
+   colour on the same floor, and a beam that ends repaints the floor under
+   its lanes. A basilisk rolled into a light-puzzle guard pack (a Command
+   room's leader or a Mixed roll) becomes the room's themed species instead:
+   same slot, same position, same HP and damage bonuses, no RNG. */
+static void basilisk_to_themed(u8 slot) {
+    entity_t *e = &entities[slot];
+    u8 id = room_roster_primary;
+    const enemy_def_t *was = &enemies[e->ai_data[0]];
+    const enemy_def_t *def;
+    u8 hp_bonus = (u8)(e->hp - was->stats.hp);
+    u8 dmg_bonus = (u8)(e->damage - was->stats.damage);
+    /* Themed species never need a specialist's spawn-time setup. Without a
+       usable one, drop the body rather than keep a beam in the room. */
+    if (id >= N_ENEMIES || is_basilisk(id)
+        || (id >= ENEMY_FACET_RAM && id <= ENEMY_FUSE_HURLER)) {
+        entity_kill(slot);
+        return;
+    }
+    def = &enemies[id];
+    e->ai_data[0] = id;
+    e->sprite_tile = def->sprite_set;
+    if (!(e->flags & (EF_ELITE | EF_ALPHA))) e->palette = def->palette;
+    e->hp = (u8)(def->stats.hp + hp_bonus);
+    e->damage = (u8)(def->stats.damage + dmg_bonus);
+    e->hitbox = (id == ENEMY_FLUTTERBAT) ? (u8)0xAA
+        : (id == ENEMY_CINDER_MAW) ? (u8)0x8D
+        : (id == ENEMY_STONE_SENTINEL || id == ENEMY_ORC
+            || id == ENEMY_BOMBER || id == ENEMY_WARLOCK) ? (u8)0xDD
+        : (u8)((6 << 4) | 6);
+}
+
 static void basilisk_setup(void) {
     static const i8 nudge_x[8] = { 0, 8, -8, 0, 16, -16, 8, -8 };
     static const i8 nudge_y[8] = { 8, 0, 0, 16, 8, 8, 16, 16 };
     u8 i, k, kept = 0;
+    u8 lattice = sun_lattice_room();
     for (i = 0; i < MAX_ENTITIES; ++i) {
         entity_t *e = &entities[i];
         i16 x, y;
         if (!(e->flags & EF_ACTIVE) || e->type != ENT_ENEMY
             || !is_basilisk(e->ai_data[0])) continue;
+        if (lattice) { basilisk_to_themed(i); continue; }
         if (kept) { entity_kill(i); continue; }
         kept = 1;
         e->sprite_tile = SPR_ENEMY_LEYBEAM;   /* blank: body is drawn in OAM */
