@@ -27,6 +27,7 @@ enum {
     SFX_PORTAL,       // descending warp pull, then rising arrival shimmer
     SFX_REFUSE,       // can't take that: dull two-note falling "nuh-uh"
     SFX_WILL,         // full Will meter: short rising power-up on CH1
+    SFX_WILL_TIER,    // Will tier gained below the cap: low rising zip
 };
 
 // Banked reward voices keep pickups mechanically legible without bloating the

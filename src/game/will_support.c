@@ -33,10 +33,10 @@ void will_bank_charge(void) BANKED {
     if (player.will_level >= WILL_LEVEL_CAP) return;
     player.will_level++;
     player.will_charge = player.will_level >= WILL_LEVEL_CAP ? WILL_MAX : 0;
-    // Cap is the rising power-up. A tier that still has room above it keeps
-    // the coin blip. Landscape secrets keep their own figure, and victories
-    // keep the victory theme.
-    sfx_play(player.will_level >= WILL_LEVEL_CAP ? SFX_WILL : SFX_COIN);
+    // Cap is the rising power-up. A tier that still has room above it gets
+    // its own short rising zip, never the coin blip (#268). Landscape
+    // secrets keep their own figure, and victories keep the victory theme.
+    sfx_play(player.will_level >= WILL_LEVEL_CAP ? SFX_WILL : SFX_WILL_TIER);
     fx_spawn(SPR_FX_IMPACT, 6, (i16)player.x + 4, (i16)player.y - 4, 10);
 }
 

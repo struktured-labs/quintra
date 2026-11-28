@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""A full Will meter plays the rising power-up, never the coin or victory theme."""
+"""Will tier-ups have their own sounds, never the coin or victory theme.
+
+A full meter plays the rising SFX_WILL power-up. A tier gained below the cap
+plays SFX_WILL_TIER, a short low rising zip; it used to reuse the coin blip,
+so a weapon level-up sounded like a coin pickup (#268).
+"""
 
 import re
 from pathlib import Path
@@ -44,7 +49,17 @@ def structural_contract():
     puzzle = (ROOT / "src/game/puzzle.c").read_text()
 
     assert "SFX_WILL," in header
-    assert "SFX_WILL : SFX_COIN" in will
+    assert "SFX_WILL : SFX_WILL_TIER" in will
+    assert "SFX_COIN" not in will, "a Will tier-up plays the coin sound again"
+    ids = sfx_ids()
+    assert len({ids["SFX_WILL_TIER"], ids["SFX_WILL"], ids["SFX_COIN"]}) == 3, (
+        "level-up, full-meter and coin sounds must be three distinct ids")
+    # The tier voice is a swept low note; the coin is two unswept high notes.
+    tier = sfx.split("case SFX_WILL_TIER:", 1)[1].split("break;", 1)[0]
+    coin = sfx.split("case SFX_COIN:", 1)[1].split("break;", 1)[0]
+    assert "ch1(0x25, 0x80, 0xB2, 1379);" in tier
+    assert "ch1(0x00, 0x80, 0xD2, 1915);" in coin
+    assert "PEND_" not in tier and "ch4(" not in tier and "melody_lock(" not in tier
     assert "SFX_PUZZLE" not in will
     assert "music_play_victory" not in will
     assert "music_play_victory();" in victory
@@ -123,12 +138,26 @@ def main():
         pb.hook_register(entry >> 16, entry & 0xFFFF, on_sfx, None)
         before = pb.memory[music]
 
-        # Cap 4, tier 0 -> 1 still has room above it: coin blip only.
-        envelopes, _sweeps = watch_bank(pb, seen, 0, 89, 7, 16)
+        # Cap 4, tier 0 -> 1 still has room above it: the tier zip, which
+        # is a different id and a different sound from the coin.
+        tier_id = ids["SFX_WILL_TIER"]
+        # clear_arena() trips the room-clear arpeggio, which holds a melody
+        # lock that mutes any lesser cue. Let it finish so the tier voice
+        # can be observed on CH1, not just its id.
+        for _ in range(120):
+            pb.memory[PLAYER + 15] = 200
+            pb.memory[PLAYER + 2] = 20
+            pb.memory[PLAYER + WILL_OFFSET] = 0
+            pb.tick()
+        envelopes, sweeps = watch_bank(pb, seen, 0, 89, 7, 16)
         assert pb.memory[PLAYER + LEVEL_OFFSET] == 1, "intermediate tier did not bank"
-        assert coin_id in seen, ("intermediate Will bank missed SFX_COIN", seen)
+        assert tier_id in seen, ("intermediate Will bank missed SFX_WILL_TIER", seen)
+        assert coin_id not in seen, ("weapon level-up played the coin sound", seen)
         assert will_id not in seen, ("intermediate bank played the full-meter chime", seen)
         assert puzzle_id not in seen, ("intermediate bank played the discovery jingle", seen)
+        assert 0x25 in sweeps, (
+            f"tier zip did not reach CH1 with its upward sweep: {sorted(set(sweeps))}")
+        assert 0xB2 in envelopes, sorted(set(envelopes))
         assert pb.memory[music] == before, "Will bank changed the music track"
         assert pb.memory[music] != MUSIC_VICTORY
 
@@ -151,7 +180,8 @@ def main():
             "top ring started before the sweep")
     finally:
         pb.stop(save=False)
-    print("[will-sfx] PASS full meter plays the rising power-up; coin and victory stay put")
+    print("[will-sfx] PASS tier-up plays its own rising zip (not the coin); "
+          "full meter plays the rising power-up; victory stays put")
 
 
 if __name__ == "__main__":

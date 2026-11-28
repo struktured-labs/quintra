@@ -232,6 +232,16 @@ void sfx_play(u8 id) {
             pend_timer = 5;
             sfx_claim_channels(14, 0);
             break;
+        case SFX_WILL_TIER:
+            // Weapon power stepped up a tier, with more above it. One low
+            // G3 on a 50% pulse with an upward sweep (pace 2, shift 5): a
+            // rising "zip" that reads as charging up. It used to be the
+            // coin's bright B5 -> E6 pair, so a level-up sounded like loose
+            // change (#268). CH1 only, about a fifth of a second; the full
+            // meter keeps the longer SFX_WILL figure.
+            ch1(0x25, 0x80, 0xB2, 1379);
+            sfx_claim_channels(14, 0);
+            break;
         case SFX_WILL:
             // Rising power-up on the harmony pulse. The figure itself lives
             // in the banked reward voice. No melody lock, so the next combat
