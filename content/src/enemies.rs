@@ -538,10 +538,14 @@ pub const ZAG_DART: Enemy = Enemy {
 // 24 px, Nox 32 px. Charge stamps ghost dots on the exact lanes, then the
 // whole lane flips to the beam on one frame. Symbol LEYBEAM is kept for
 // save/test stability; SPRITE_LEYBEAM (219) is a blank core tile.
+// HP is deliberately high (48 / 72 / 96, was 14 / 20 / 26): a body this big
+// should take a sustained fight from every hero, not one volley (#272).
+// Keep it at or below 120: stage depth adds up to 6 and a pack alpha
+// doubles the total, which must still fit in a u8.
 pub const LEYBEAM: Enemy = Enemy {
     id: ENEMY_LEYBEAM, symbol: "LEYBEAM", name: "Ley Basilisk",
     sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_GREEN,
-    stats: EnemyStats { hp: 14, damage: 1, speed: 32, score: 48, weakness: 0x08, poise: 1 },
+    stats: EnemyStats { hp: 48, damage: 1, speed: 32, score: 48, weakness: 0x08, poise: 1 },
     ai_script: AiScriptId::BeamCaster { tell_ticks: 40, beam_ticks: 36, cooldown_ticks: 100 },
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
@@ -549,7 +553,7 @@ pub const LEYBEAM: Enemy = Enemy {
 pub const SUN_BASILISK: Enemy = Enemy {
     id: ENEMY_SUN_BASILISK, symbol: "SUN_BASILISK", name: "Sun Basilisk",
     sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_RED,
-    stats: EnemyStats { hp: 20, damage: 1, speed: 32, score: 64, weakness: 0x08, poise: 1 },
+    stats: EnemyStats { hp: 72, damage: 1, speed: 32, score: 64, weakness: 0x08, poise: 1 },
     ai_script: AiScriptId::BeamCaster { tell_ticks: 44, beam_ticks: 40, cooldown_ticks: 96 },
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
@@ -557,7 +561,7 @@ pub const SUN_BASILISK: Enemy = Enemy {
 pub const NOX_BASILISK: Enemy = Enemy {
     id: ENEMY_NOX_BASILISK, symbol: "NOX_BASILISK", name: "Nox Basilisk",
     sprite_set: SPRITE_LEYBEAM, palette: OBJ_PAL_MAGIC,
-    stats: EnemyStats { hp: 26, damage: 1, speed: 32, score: 80, weakness: 0x08, poise: 1 },
+    stats: EnemyStats { hp: 96, damage: 1, speed: 32, score: 80, weakness: 0x08, poise: 1 },
     ai_script: AiScriptId::BeamCaster { tell_ticks: 48, beam_ticks: 44, cooldown_ticks: 90 },
     drop_table: DROP_SMALL_COIN, biomes: &[BIOME_CRYSTAL_CAVERNS],
 };
